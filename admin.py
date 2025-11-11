@@ -14,13 +14,13 @@ from PyQt6.QtWidgets import (
 # ******************************************************************************
 # ใช้พาธจากโค้ดหน้าหลัก (main.py) เพื่อให้เชื่อมต่อ DB เดียวกัน
 # ⚠️ ตรวจสอบพาธ 4 ตำแหน่งนี้ให้ถูกต้องตามเครื่องของคุณ!
-RUBIK_REG   = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\font\Rubik-Regular.ttf"
-RUBIK_BOLD  = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\font\Rubik-Bold.ttf"
-FC_MINIMAL  = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\font\FC Minimal.ttf"
-LOGO_IMG    = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\picture\logo.png"
+RUBIK_REG   = os.path.join("font", "Rubik-Regular.ttf")
+RUBIK_BOLD  = os.path.join("font", "Rubik-Bold.ttf")
+FC_MINIMAL  = os.path.join("font", "FC Minimal.ttf")
+LOGO_IMG    = os.path.join("picture", "logo.png")
 
 # ใช้พาธฐานข้อมูลที่กำหนดในโค้ดหน้าหลัก
-DB_DIR      = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\dataelee"
+DB_DIR      = DATA_ELEE_PATH = r"dataelee"
 DB_USER_PATH = os.path.join(DB_DIR, "passenger_bookings.db")
 # DB ของ ADMIN (users.db - ในโค้ดหน้าหลักชี้ไปที่ users.db ในโฟลเดอร์ปัจจุบัน)
 # หากต้องการให้ Admin Console ใช้ users.db นี้สำหรับโครงสร้าง bookings, users
