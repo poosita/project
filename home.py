@@ -25,11 +25,11 @@ CURRENT_USER = _get_arg("--user", "guest")
 # ---------- Paths (แก้ตามเครื่องคุณ) ----------
 # ******************************************************************************
 # ⚠️ ตรวจสอบพาธ 4 ตำแหน่งนี้ให้ถูกต้องตามเครื่องของคุณ!
-LOGO_IMG    = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\picture\logo.png"
-QR_IMG      = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\picture\QR.png"
-RUBIK_REG   = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\font\Rubik-Regular.ttf"
-RUBIK_BOLD  = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\font\Rubik-Bold.ttf"
-FC_MINIMAL  = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\font\FC Minimal.ttf"
+LOGO_IMG    = r"picture\logo.png"
+QR_IMG      = r"picture\QR.png"
+RUBIK_REG   = r"font\Rubik-Regular.ttf"
+RUBIK_BOLD  = r"font\Rubik-Bold.ttf"
+FC_MINIMAL  = r"font\FC Minimal.ttf"
 # ******************************************************************************
 
 PROFILE_DIR  = os.path.join(os.path.expanduser("passenger_bookings"))
@@ -189,6 +189,112 @@ def get_all_routes_from_db() -> dict:
     
     return routes
 
+# 🚨 ฟังก์ชันนี้ถูกประกาศใน Global Scope 🚨
+def _admin_db_save_booking_summary(data: dict, seat_list: list[str], ticket_no: str):
+    """
+    บันทึกสรุปการจองลงในฐานข้อมูล 'bookings' ของ Admin (users.db) 
+    """
+    try:
+        with _db_connect_admin() as con:
+            cur = con.cursor()
+            
+            price_each = float(data['price_each'])
+            qty = len(seat_list)
+            subtotal = price_each * qty
+            vat = round(subtotal * 0.07, 2)
+            
+            customer_name = f"{data['first_name']} {data['last_name']}"
+            route_from = data['origin'].split()[0] # ดึงแค่จังหวัด "ขอนแก่น"
+            route_to = data['dest']
+            date_str = data['date'].toString("yyyy-MM-dd")
+            seat_str = ", ".join(seat_list)
+            
+            cur.execute("""
+                INSERT INTO bookings(
+                    ticket_no, customer_name, route_from, route_to, date, status,
+                    phone, email, seat, price, vat, slip_path, dep_time, arr_time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                ticket_no,
+                customer_name,
+                route_from,
+                route_to,
+                date_str,
+                "รอดำเนินการ", 
+                data['phone'],
+                data['email'],
+                seat_str,
+                subtotal,
+                vat,
+                data.get('slip_path', ''),
+                data['dep_time'],
+                data['arr_time']
+            ))
+            con.commit()
+    except Exception as e:
+        print(f"Admin DB Save Error: {e}")
+
+# 🚨 ฟังก์ชันนี้ถูกประกาศใน Global Scope 🚨
+def get_booked_seats(qdate: QDate, dep_time: str, dest: str) -> set[str]:
+    """ดึงที่นั่งที่ถูกจองแล้วสำหรับเที่ยวรถและวันที่เฉพาะ"""
+    dstr = qdate.toString("yyyy-MM-dd")
+    
+    dest_part = f'"dest": "{dest}"' 
+    dep_time_part = f'"dep_time": "{dep_time}"' 
+    
+    with db_connect_user() as con:
+        cur = con.cursor()
+        cur.execute("""
+            SELECT seat_code FROM passenger_bookings 
+            WHERE travel_date = ? 
+            AND trip_info_json LIKE ? 
+            AND trip_info_json LIKE ? 
+            AND is_booked = 1
+        """, (
+            dstr, 
+            f'%{dest_part}%',
+            f'%{dep_time_part}%'
+        ))
+        return {r[0] for r in cur.fetchall()}
+
+# 🚨 ฟังก์ชันนี้ถูกประกาศใน Global Scope 🚨
+def save_new_booking(data: dict, seat_list: list[str], ticket_no: str):
+    """บันทึกการจองใหม่ลงในตาราง passenger_bookings"""
+    
+    trip_data = {
+        "origin": data['origin'],
+        "dest": data['dest'],
+        "dep_time": data['dep_time'],
+        "arr_time": data['arr_time'],
+        "price": data['price_each']
+    }
+    trip_info_json = json.dumps(trip_data)
+    travel_date = data['date'].toString("yyyy-MM-dd") 
+    
+    with db_connect_user() as con:
+        cur = con.cursor()
+        booking_id = None
+        for seat in seat_list:
+            cur.execute("""
+            INSERT OR IGNORE INTO passenger_bookings (
+                first_name, last_name, phone, citizen_id, email, travel_date, trip_info_json, seat_code, ticket_no
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                data['first_name'], 
+                data['last_name'], 
+                data['phone'], 
+                data['citizen_id'], 
+                data['email'], 
+                travel_date, 
+                trip_info_json, 
+                seat,
+                ticket_no
+            ))
+            if booking_id is None:
+                booking_id = cur.lastrowid
+        con.commit()
+        return booking_id if booking_id else -1
+
 # ----------------------------------------------------
 
 # ---------- Theme ----------
@@ -325,12 +431,15 @@ class App(QWidget):
         """)
         nav_row = QHBoxLayout(self.nav); nav_row.setContentsMargins(10,4,10,4); nav_row.setSpacing(6)
         self.btn_home    = QPushButton("HOME PAGE")
-        self.btn_sched = QPushButton("BUS SCHEDULE")
+        # ❌ ลบ self.btn_sched ออก
         self.btn_book    = QPushButton("BOOKING")
         self.btn_pay     = QPushButton("PAYMENT")
         self.btn_about = QPushButton("ABOUT ME")
-        for b in (self.btn_home,self.btn_sched,self.btn_book,self.btn_pay,self.btn_about):
+        
+        # ❌ เพิ่มปุ่มที่เหลือ
+        for b in (self.btn_home, self.btn_book, self.btn_pay, self.btn_about):
             b.setProperty("role","nav"); nav_row.addWidget(b); b.clicked.connect(self._on_nav_clicked)
+        
         self._set_active_tab(self.btn_home)
 
         header.addStretch(1)
@@ -365,22 +474,24 @@ class App(QWidget):
         btn.style().unpolish(btn); btn.style().polish(btn); btn.update()
 
     def _set_active_tab(self, active_btn: QPushButton):
-        for b in (self.btn_home, self.btn_sched, self.btn_book, self.btn_pay, self.btn_about):
+        # ❌ ปรับรายการปุ่ม
+        for b in (self.btn_home, self.btn_book, self.btn_pay, self.btn_about):
             self._style_nav(b, b is active_btn)
 
     def _set_nav_access(self, stage: str):
+        # ❌ ปรับการเปิด/ปิด
         if stage == "home":
-            self.btn_sched.setEnabled(True)
+            # self.btn_sched.setEnabled(True) # ❌ ลบออก
             self.btn_about.setEnabled(True)
             self.btn_book.setEnabled(False)
             self.btn_pay.setEnabled(False)
         elif stage == "booking":
-            self.btn_sched.setEnabled(True)
+            # self.btn_sched.setEnabled(True) # ❌ ลบออก
             self.btn_book.setEnabled(True)
             self.btn_pay.setEnabled(False)
             self.btn_about.setEnabled(False)
         elif stage == "payment":
-            self.btn_sched.setEnabled(True)
+            # self.btn_sched.setEnabled(True) # ❌ ลบออก
             self.btn_book.setEnabled(True)
             self.btn_pay.setEnabled(True)
             self.btn_about.setEnabled(True)
@@ -392,7 +503,7 @@ class App(QWidget):
         mapping = {
             self.btn_home: self.page_home,
             self.btn_book: self.page_booking,
-            self.btn_sched: self.page_booking,
+            # self.btn_sched: self.page_booking, # ❌ ลบออก
             self.btn_pay:  self.page_payment,
             self.btn_about: self.page_payment
         }
