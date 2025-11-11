@@ -6,16 +6,13 @@
 
 import os, sys, re, sqlite3
 
-# ---------- Assets/Paths (โปรดแก้ไข Path ให้ตรงกับเครื่องของคุณ) ----------
-# *** แก้ไข PATHS ให้ใช้ Absolute Path ที่คุณยืนยันแล้ว ***
-# ******************************************************************************
-BUS_SIGNIN = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\picture\sign innn.png"
-BUS_SIGNUP = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\picture\sign up.png"
-RUBIK_REG  = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\font\Rubik-Regular.ttf"
-RUBIK_BOLD = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\font\Rubik-Bold.ttf"
-HOME_PY    = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\code\home.py"
-ADMIN_PY   = r"C:\Users\LOQ\OneDrive - Khon Kaen University\Desktop\project python\code\admin.py" # เพิ่มสำหรับ Admin
-# ******************************************************************************
+
+BUS_SIGNIN = r"picture\sign innn.png"
+BUS_SIGNUP = r"picture\sign up.png"
+RUBIK_REG  = r"font\Rubik-Regular.ttf"
+RUBIK_BOLD = r"font\Rubik-Bold.ttf"
+HOME_PY    = r"code\home.py"
+ADMIN_PY   = r"code\admin.py"
 
 # คำนวณ APP_DIR จาก Path ของไฟล์อื่น
 APP_DIR    = os.path.dirname(os.path.dirname(HOME_PY)) # ชี้ไปที่ '...project python'
